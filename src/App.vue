@@ -705,6 +705,9 @@
     height: 100%;
     padding-top: 1em;
   }
+  .nav-link {
+    color: #efefef !important;
+  }
   .title {
     font-size: 2em;
   }
