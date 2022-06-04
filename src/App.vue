@@ -7,7 +7,7 @@
   import { acceptedWordList } from './assets/js/accepted_word_list.js'
   import { wordList } from './assets/js/wordlist.js'
 
-  const words = [wordList[1000],wordList[666],wordList[420],wordList[69],wordList[0]]
+  let words = [wordList[1000],wordList[666],wordList[420],wordList[69],wordList[0]]
 
   let keyboardRows = ref([
     [
@@ -169,35 +169,40 @@
   let showHelpModal = ref(false)
   let showConfirmModal = ref(false)
   let allGuesses = ref(Array())
-  allGuesses.value.push([])
-  for ( let i=1; i < words.length; i++ ) {
-    let guesses = []
-    if ( i < words.length - 1 ) {
-      let letters = []
-      for ( let x=0; x < wordLength; x++ ) {
-        letters.push({ 'letter': words[i-1].charAt(x), 'state': 0, 'initialized': true, 'colored': true })
-      }
-      guesses.push(letters)
-    } else {
-      for ( let x=0; x < words.length - 1; x++ ){
-        let guess = []
-        for ( let j=0; j < wordLength; j++ ) {
-          guess.push({ 'letter': words[x].charAt(j), 'state': 0, 'initialized': true, 'colored': true })
+
+  const loadGuesses = function() {
+    allGuesses.value.length = 0
+    allGuesses.value.push([])
+    for ( let i=1; i < words.length; i++ ) {
+      let guesses = []
+      if ( i < words.length - 1 ) {
+        let letters = []
+        for ( let x=0; x < wordLength; x++ ) {
+          letters.push({ 'letter': words[i-1].charAt(x), 'state': 0, 'initialized': true, 'colored': true })
         }
-        guesses.push(guess)
+        guesses.push(letters)
+      } else {
+        for ( let x=0; x < words.length - 1; x++ ){
+          let guess = []
+          for ( let j=0; j < wordLength; j++ ) {
+            guess.push({ 'letter': words[x].charAt(j), 'state': 0, 'initialized': true, 'colored': true })
+          }
+          guesses.push(guess)
+        }
+      }
+      allGuesses.value.push(guesses)
+    }
+    for ( let i=0; i < allGuesses.value.length; i++ ) {
+      for ( let x=allGuesses.value[i].length; x <= numberOfGuesses - 1; x++ ){
+        let initialGuess = []
+        for ( let j=0; j < wordLength; j++ ) {
+          initialGuess.push({ 'letter': '', 'state': 0, 'initialized': false, 'colored': false, 'completed': false })
+        }
+        allGuesses.value[i].push(initialGuess)
       }
     }
-    allGuesses.value.push(guesses)
   }
-  for ( let i=0; i < allGuesses.value.length; i++ ) {
-    for ( let x=allGuesses.value[i].length; x <= numberOfGuesses - 1; x++ ){
-      let initialGuess = []
-      for ( let j=0; j < wordLength; j++ ) {
-        initialGuess.push({ 'letter': '', 'state': 0, 'initialized': false, 'colored': false, 'completed': false })
-      }
-      allGuesses.value[i].push(initialGuess)
-    }
-  }
+  loadGuesses()
   let currentGuess = ref(0)
   let currentGame = ref(0)
   let playerGuessCount = ref(1)
@@ -225,19 +230,64 @@
   })
 
   let boardOneDisabled = computed(() => {
-    return currentGame.value != 0 && !finished.value
+    if ( finished.value ) {
+      if ( currentGame.value > -1 ) {
+        return false
+      }
+    } else {
+      if ( currentGame.value == 0 ) {
+        return false
+      }
+    }
+    return true
   })
   let boardTwoDisabled = computed(() => {
-    return currentGame.value != 1 && !finished.value
+    if ( finished.value ) {
+      if ( currentGame.value > 0 ) {
+        return false
+      }
+    } else {
+      if ( currentGame.value == 1 ) {
+        return false
+      }
+    }
+    return true
   })
   let boardThreeDisabled = computed(() => {
-    return currentGame.value != 2 && !finished.value
+    if ( finished.value ) {
+      if ( currentGame.value > 1 ) {
+        return false
+      }
+    } else {
+      if ( currentGame.value == 2 ) {
+        return false
+      }
+    }
+    return true
   })
   let boardFourDisabled = computed(() => {
-    return currentGame.value != 3 && !finished.value
+    if ( finished.value ) {
+      if ( currentGame.value > 2 ) {
+        return false
+      }
+    } else {
+      if ( currentGame.value == 3 ) {
+        return false
+      }
+    }
+    return true
   })
   let boardFiveDisabled = computed(() => {
-    return currentGame.value != 4 && !finished.value
+    if ( finished.value ) {
+      if ( currentGame.value > 3 ) {
+        return false
+      }
+    } else {
+      if ( currentGame.value == 4 ) {
+        return false
+      }
+    }
+    return true
   })
 
   const completeRow = function(skipAnimation,skipKeyboard) {
@@ -245,7 +295,6 @@
     let skip = skipAnimation ? 0 : 1
     let guess = allGuesses.value[currentGame.value][currentGuess.value]
     for ( let i = 0; i < guess.length; i++){
-      console.log('i=' + i + 'guess[i][letter]=' + "'" + guess[i]['letter'] + "'")
       if ( guess[i]['letter'] === '' ) {
         return
       }
@@ -311,7 +360,6 @@
         updateKeyboard(keyboardUpdates[i][0],keyboardUpdates[i][1])
       }
       if ( finished.value ) {
-        genGameResults()
         showWinModal.value = true
       }
     }, 300 * guess.length * skip)
@@ -334,7 +382,6 @@
             completeRow(true)
             completeRow(true)
           }
-
         },2500)
         return
       }
@@ -343,10 +390,9 @@
     currentGuess.value++
     currentPosition.value = 0
     if (!skipAnimation ){
-      if (playerGuessCount.value < numberOfGuesses ){
-        playerGuessCount.value++
-      } else {
+      if (currentGuess.value == numberOfGuesses ){
         finished.value = true
+        showWinModal.value = true
       }
     }
   }
@@ -392,7 +438,7 @@
   })
 
   const onKey = function(key) {
-    if (showModal.value) {
+    if (showModal.value || finished.value ) {
       return
     }
     if (/^[a-zA-Z_\-]$/.test(key)) {
@@ -433,6 +479,9 @@
   }
 
   const guessNotInDictionary = computed(() => {
+    if ( currentGame.value < 0 || currentGame.value > 4 || currentGuess.value < 0 || finished.value ){
+      return false
+    }
     let playerAnswer = allGuesses.value[currentGame.value][currentGuess.value].map((e) => e['letter']).join('')
     if ( words[currentGame.value] == playerAnswer ){
       return false
@@ -451,6 +500,32 @@
       notInDictionary.value = false
     },1500)
   }
+
+  const playAgain = function() {
+    resetKeyboard()
+    currentGame.value = 0
+    currentGuess.value = 0
+    currentPosition.value = 0
+    correct.value = false
+    finished.value = false
+    words = [wordList[1001],wordList[66],wordList[42],wordList[9],wordList[20]]
+    showWinModal.value = false
+    loadGuesses()
+  }
+
+  const giveUp = function() {
+    showConfirmModal.value = false;
+    finished.value = true
+    gaveUp.value = true
+    showWinModal.value = true
+  }
+
+  const openWinModal = function() {
+    if ( !finished.value ){
+      return
+    }
+    showWinModal.value = true
+  }
 </script>
 
 <template>
@@ -463,13 +538,12 @@
       </div>
       <div class="col-md-3 help">
         <XIcon class="give-up-icon" @click="showConfirmModal = (true && !finished)"></XIcon>
-        <ChartBarIcon @click="showWinModal = true"></ChartBarIcon>
+        <ChartBarIcon @click="openWinModal" :class="{ inactive: !finished }" ></ChartBarIcon>
         <QuestionMarkCircleIcon @click="showHelpModal = true"></QuestionMarkCircleIcon>
       </div>
     </div>
     <div class="info">
       <h5 class="warning-message" :class="{'shown': notInDictionary}">Word not in dictionary.</h5>
-      {{words}}<br/>
     </div>
     <div class="row">
       <div class="col-2"></div>
@@ -511,8 +585,87 @@
     </div>
     <Keyboard :rows="keyboardRows"></Keyboard>
     <div class="footer">
-      Created by theasylm {{wordList.length}}
+      Created by theasylm
     </div>
+    <vue-final-modal
+        name="winModal"
+        classes="modal-container"
+        :click-to-close="false"
+        :esc-to-close="true"
+        v-model="showWinModal"
+        content-class="modal-content"
+        :max-width="500"
+      >
+      <div class="close-modal-div">
+        <XIcon @click="showWinModal = false"></XIcon>
+      </div>
+      <span class="modal__title" id="win-msg">{{msg}}</span>
+      <div class="modal__content">
+        <div class="solution" v-if="finished && !correct">
+          Solutions:
+          <span class="solution-word" v-for="(word,i) in words">{{i + 1}}: {{word.toUpperCase()}}</span>
+        </div>
+        <button class="btn btn-primary" @click="playAgain">Play Again</button>
+      </div>
+    </vue-final-modal>
+    <vue-final-modal
+      name="giveUpModal"
+      classes="modal-container"
+      :click-to-close="false"
+      :esc-to-close="true"
+      v-model="showConfirmModal"
+      content-class="modal-content"
+      :max-width="500"
+    >
+      <div class="close-modal-div">
+        <XIcon @click="showConfirmModal = false"></XIcon>
+      </div>
+      <div class="modal__content confirm">
+        <div class="hint-div">
+          <div class="warning">Are you sure you wish to give up?</div>
+        </div>
+      </div>
+      <div class="modal__action">
+        <div class="mb-3 row">
+          <div class="col-sm-4">
+            <button @click="showConfirmModal = false" class="btn btn-primary">Keep Thinking</button>
+          </div>
+          <div class="col-sm-4">
+            <button @click="giveUp" class="btn btn-danger">Give Up</button>
+          </div>
+        </div>
+      </div>
+    </vue-final-modal>
+    <vue-final-modal
+        name="helpModal"
+        classes="modal-container help-modal"
+        :click-to-close="false"
+        :esc-to-close="true"
+        v-model="showHelpModal"
+        content-class="modal-content"
+        :max-width="600"
+      >
+        <div class="close-modal-div">
+          <XIcon @click="showHelpModal = false"></XIcon>
+        </div>
+        <div class="modal__content">
+          <h2>How to Play</h2>
+          <div class="mb-3 row">
+            <div class="col-sm-12">
+              Guess the five words in the given number of tries. After each guess, the tiles will be colored to indicate how close to the target word your guess was.
+              <img src="./assets/green_clue.png"/>
+              Green indicates the N is in the correct spot.
+              <img src="./assets/yellow_clue.png"/>
+              Yellow indicates the U is in the word, but in another position.
+              <p><img src="./assets/grey_clue.png"/>
+              Grey indicates the P is not in the word.</p>
+              <p>After the first word, you will be seeded with the previous word as your starting guess.</p>
+              <p>On the final word, you will be seeded with the previous four words as starting guesses.</p>
+              <p>If you wish to give up, you can hit the red X. You will be asked to confirm your decision.</p>
+            </div>
+          </div>
+        </div>
+      </vue-final-modal>
   </div>
 </template>
 
@@ -602,10 +755,14 @@
     opacity: 1;
     margin-bottom: 0;
   }
+  #boardsNav {
+    margin-bottom: 1rem;
+  }
   .solution {
     font-size: 1.5rem;
     font-weight: 500;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
+    padding-bottom: 1rem;
   }
   @keyframes fade {
     0%,100% { opacity: 0 }
@@ -645,13 +802,15 @@
   #win-msg {
     font-size:  2.25rem;
   }
+  .solution-word {
+    display: block;
+  }
   .give-up-icon {
     color:  #842029;
     width:  46px !important;
   }
   .warning {
     font-size: 2rem;
-
   }
   .slider {
     display: flex;
