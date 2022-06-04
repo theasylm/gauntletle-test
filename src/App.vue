@@ -7,7 +7,18 @@
   import { acceptedWordList } from './assets/js/accepted_word_list.js'
   import { wordList } from './assets/js/wordlist.js'
 
-  let words = [wordList[1000],wordList[666],wordList[420],wordList[69],wordList[0]]
+  const genNewWords = function() {
+    words = []
+    while ( words.length < 5 ) {
+      let word = wordList[getRandomInt()]
+      if ( !words.includes(word) ) {
+        words.push(word)
+      }
+    }
+  }
+  //let words = [wordList[1000],wordList[666],wordList[420],wordList[69],wordList[0]]
+  let words = []
+  genNewWords()
 
   let keyboardRows = ref([
     [
@@ -508,9 +519,9 @@
     currentPosition.value = 0
     correct.value = false
     finished.value = false
-    words = [wordList[1001],wordList[66],wordList[42],wordList[9],wordList[20]]
-    showWinModal.value = false
+    genNewWords()
     loadGuesses()
+    showWinModal.value = false
   }
 
   const giveUp = function() {
@@ -525,6 +536,12 @@
       return
     }
     showWinModal.value = true
+  }
+
+  function getRandomInt() {
+    let min = Math.ceil(0);
+    let max = Math.floor(wordList.length);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 </script>
 
