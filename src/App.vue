@@ -781,7 +781,6 @@
   .solution {
     font-size: 1.5rem;
     font-weight: 500;
-    margin-top: 1rem;
     padding-bottom: 1rem;
   }
   @keyframes fade {
@@ -821,6 +820,7 @@
   }
   #win-msg {
     font-size:  2.25rem;
+    margin-bottom: 1.5rem;
   }
   .solution-word {
     display: block;
