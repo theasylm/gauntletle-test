@@ -18,7 +18,7 @@
 
 <style>
   .board {
-    height: calc(100vh - 24rem);
+    height: calc(100vh - 24.5rem);
     overflow: scroll;
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
