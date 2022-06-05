@@ -241,16 +241,7 @@
   })
 
   let boardOneDisabled = computed(() => {
-    if ( finished.value ) {
-      if ( currentGame.value > -1 ) {
-        return false
-      }
-    } else {
-      if ( currentGame.value == 0 ) {
-        return false
-      }
-    }
-    return true
+    return false
   })
   let boardTwoDisabled = computed(() => {
     if ( finished.value ) {
@@ -258,7 +249,7 @@
         return false
       }
     } else {
-      if ( currentGame.value == 1 ) {
+      if ( currentGame.value > 0 ) {
         return false
       }
     }
@@ -270,7 +261,7 @@
         return false
       }
     } else {
-      if ( currentGame.value == 2 ) {
+      if ( currentGame.value > 1 ) {
         return false
       }
     }
@@ -282,7 +273,7 @@
         return false
       }
     } else {
-      if ( currentGame.value == 3 ) {
+      if ( currentGame.value > 2 ) {
         return false
       }
     }
@@ -294,7 +285,7 @@
         return false
       }
     } else {
-      if ( currentGame.value == 4 ) {
+      if ( currentGame.value > 3 ) {
         return false
       }
     }
