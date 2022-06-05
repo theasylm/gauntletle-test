@@ -371,8 +371,9 @@
         finished.value = true
         currentPosition.value = -1
         currentGuess.value = -1
-        return
       } else {
+        currentPosition.value = 0
+        currentGuess.value = -1
         setTimeout(() => {
           currentPosition.value = 0
           currentGuess.value = 0
@@ -385,8 +386,8 @@
             completeRow(true)
           }
         },2500)
-        return
       }
+      return
     }
 
     currentGuess.value++
