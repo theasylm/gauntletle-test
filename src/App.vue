@@ -489,7 +489,13 @@
     }
   }
 
-  const onKeyup = (e) => onKey(e.key)
+  const onKeyup = (e) => {
+    if ( e.ctrlKey || e.altKey || e.metaKey ) {
+      return
+    }
+
+    onKey(e.key)
+  }
   const tileClick = function(e) {
     if ( finished.value ){
       return
