@@ -618,7 +618,6 @@
     </div>
     <div class="info">
       <h5 class="warning-message" :class="{'shown': notInDictionary}">Word not in dictionary.</h5>
-      {{words}}
     </div>
     <div class="row">
       <div class="col-2"></div>
