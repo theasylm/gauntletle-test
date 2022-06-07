@@ -7,16 +7,109 @@
   import { acceptedWordList } from './assets/js/accepted_word_list.js'
   import { wordList } from './assets/js/wordlist.js'
 
+  function CalculateWordColors(answer, guess) {
+    answer = answer.toLowerCase();
+    guess = guess.toLowerCase();
+
+    let len = answer.length;
+    if (guess.length != len) {
+        throw "Guess and answer must be the same length";
+    }
+
+    let numExpectedCounts = new Array(26).fill(0);
+    for (let i = 0; i < len; i++) {
+        let answerChar = answer[i];
+        let guessChar = guess[i];
+        if (answerChar != guessChar) {
+            let answerIndex = answerChar.charCodeAt(0) - 'a'.charCodeAt(0);
+            numExpectedCounts[answerIndex]++;
+        }
+    }
+
+    let numSeenCounts = new Array(26).fill(0);
+    let colors = '';
+    for (let i = 0; i < len; i++) {
+        let guessChar = guess[i];
+        let answerChar = answer[i];
+        if (guessChar < 'a' || guessChar > 'z') {
+            colors += 'x';
+            continue;
+        }
+
+        if (guessChar == answerChar) {
+            colors += 'g';
+        } else {
+            let guessIndex = guessChar.charCodeAt(0) - 'a'.charCodeAt(0);
+            let numExpected = numExpectedCounts[guessIndex];
+            let numSeen = numSeenCounts[guessIndex];
+            numSeenCounts[guessIndex]++;
+
+            if (numSeen < numExpected) {
+                colors += 'y';
+            } else {
+                colors += 'x';
+            }
+        }
+    }
+
+    return colors;
+  }
+
+
+  function GetFairAnswer(answerList, forcedGuesses) {
+    if (answerList.length == 0 || forcedGuesses.length == 0) {
+        throw "No answers or forced guesses";
+    }
+
+    let colorsMap = new Map();
+    for (let answer of answerList) {
+        if (forcedGuesses.includes(answer)) {
+            continue;
+        }
+
+        // Calculate the colors for this answer and concatinate them into one string
+        let answerColors = forcedGuesses.map(guess => CalculateWordColors(answer, guess)).join('');
+
+        // Insert or update the colorsMap
+        if (colorsMap.has(answerColors)) {
+            colorsMap.get(answerColors).push(answer);
+        } else {
+            colorsMap.set(answerColors, [answer]);
+        }
+    }
+
+    let fairAnswers = [];
+    for (let [_, answers] of colorsMap) {
+        if (answers.length > 1 && answers.length <= 4) {
+            fairAnswers.push.apply(fairAnswers, answers);
+        }
+    }
+
+    if (fairAnswers.length == 0) {
+        return '';
+    }
+
+    // Return a random fair answer
+    return fairAnswers[Math.floor(Math.random() * fairAnswers.length)];
+  }
+
   const genNewWords = function() {
-    words = []
-    while ( words.length < 5 ) {
-      let word = wordList[getRandomInt()]
-      if ( !words.includes(word) ) {
-        words.push(word)
+    while ( words.length < 5 ){
+      words = []
+
+      while ( words.length < 4 ) {
+        let word = wordList[getRandomInt()]
+        if ( !words.includes(word) ) {
+          words.push(word)
+        }
+      }
+      let fair = GetFairAnswer(wordList,words)
+      if ( fair != '' ) {
+        words.push(fair)
       }
     }
   }
-  //let words = [wordList[1000],wordList[666],wordList[420],wordList[69],wordList[0]]
+
   let words = []
   genNewWords()
 
@@ -311,50 +404,21 @@
     }
     let changedLetters = []
     let keyboardUpdates = []
-    for ( let i=0; i < guess.length; i++ ) {
-      if ( guess[i]['letter'] === answerLetters[i] ) {
-        answerLetters[i] = null
-        changedLetters.push(i)
-        if ( !skipKeyboard ){
-          keyboardUpdates.push([guess[i]['letter'],4])
-        }
-        setTimeout( () => {
-          guess[i]['state'] = 4
-        }, 150 * (i) * skip)
-        setTimeout( () => {
-          guess[i]['colored'] = true
-        }, (450 + 150 * (i)) * skip)
-      }
-    }
+    const colors = CalculateWordColors(word,playerAnswer)
+    const states = [ '', '', 'x', 'y', 'g' ]
 
-    for ( let i=0; i < guess.length; i++ ) {
-      if ( !changedLetters.includes(i) && answerLetters.includes(guess[i]['letter']) ){
-        answerLetters[answerLetters.indexOf(guess[i]['letter'])] = null
-        changedLetters.push(i)
-        if ( !skipKeyboard ){
-          keyboardUpdates.push([guess[i]['letter'],3])
-        }
-        setTimeout( () => {
-          guess[i]['state'] = 3
-        }, 150 * (i) * skip)
-        setTimeout( () => {
-          guess[i]['colored'] = true
-        }, (450 + 150 * (i)) * skip)
+    for ( let i=0; i < colors.length; i++ ) {
+      let state = states.indexOf(colors.charAt(i))
+      if ( !skipKeyboard ){
+        keyboardUpdates.push([guess[i]['letter'],state])
       }
-    }
+      setTimeout( () => {
+        guess[i]['state'] = state
+      }, 150 * (i) * skip)
+      setTimeout( () => {
+        guess[i]['colored'] = true
+      }, (450 + 150 * (i)) * skip)
 
-    for ( let i=0; i < guess.length; i++ ) {
-      if ( !changedLetters.includes(i) ) {
-        if ( !skipKeyboard ){
-          keyboardUpdates.push([guess[i]['letter'],2])
-        }
-        setTimeout( () => {
-          guess[i]['state'] = 2
-        }, 150 * (i) * skip)
-        setTimeout( () => {
-          guess[i]['colored'] = true
-        }, (450 + 150 * (i)) * skip)
-      }
     }
 
     setTimeout( () => {
