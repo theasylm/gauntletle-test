@@ -735,6 +735,8 @@
               <p>After the first word, you will be seeded with the previous word as your starting guess.</p>
               <p>On the final word, you will be seeded with the previous four words as starting guesses.</p>
               <p>If you wish to give up, you can hit the red X. You will be asked to confirm your decision.</p>
+              <hr/>
+              <small>Special thanks for Rangsk for the extra code!</small>
             </div>
           </div>
         </div>
