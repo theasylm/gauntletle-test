@@ -55,7 +55,6 @@
     return colors;
   }
 
-
   function GetFairAnswer(answerList, forcedGuesses) {
     if (answerList.length == 0 || forcedGuesses.length == 0) {
         throw "No answers or forced guesses";
@@ -93,6 +92,34 @@
     return fairAnswers[Math.floor(Math.random() * fairAnswers.length)];
   }
 
+  const encode = function() {
+    let buffer = new ArrayBuffer(10)
+    let bufferView16 = new Uint16Array(buffer)
+    for ( let i=0; i < words.length; i++ ){
+      bufferView16[i] = wordList.indexOf(words[i])
+    }
+    let bufferView8 = new Uint8Array(buffer)
+    let binary = '';
+    let len = bufferView8.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bufferView8[i]);
+    }
+    return window.btoa(binary).replace('+', '-').replace('/', '_').replace(/=+$/, '')
+  }
+
+  const decode = function(encoded) {
+    encoded = encoded.replace('-', '+').replace('_', '/')
+    while (encoded.length % 4)
+      encoded += '='
+    let decoded = window.atob(encoded)
+    let len = decoded.length;
+    let decoded8 = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        decoded8[i] = decoded.charCodeAt(i);
+    }
+    return new Uint16Array(decoded8.buffer);
+  }
+
   const genNewWords = function() {
     while ( words.length < 5 ){
       words = []
@@ -110,8 +137,21 @@
     }
   }
 
+  const loadWords = function(p) {
+    let a = decode(p)
+    for (let i=0; i < 5; i++){
+      words[i] = wordList[a[i]]
+    }
+  }
+
   let words = []
-  genNewWords()
+
+  let p = (new URL(document.location)).searchParams.get('p')
+  if ( p ) {
+    loadWords(p)
+  } else {
+    genNewWords()
+  }
 
   let keyboardRows = ref([
     [
@@ -493,7 +533,6 @@
     if ( e.ctrlKey || e.altKey || e.metaKey ) {
       return
     }
-
     onKey(e.key)
   }
   const tileClick = function(e) {
@@ -606,6 +645,55 @@
     let max = Math.floor(wordList.length);
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
+
+  const copyResults = function() {
+    let gameResults = "Gauntletle Results\n"
+    let count = getPlayerGuessCount(0)
+    gameResults += "1: " + ( count > 0 ? count : 'X' ) + "/6\n"
+    for ( let i=1; i < 4; i++ ) {
+      count = getPlayerGuessCount(i) - 1
+      gameResults += (i + 1) + ": " + ( count > 0 ? count : 'X' ) + "/5\n"
+    }
+    count = getPlayerGuessCount(4) - 4
+    gameResults += "5: " + ( count > 0 ? count : 'X' ) + "/2\n"
+    gameResults += "How well can you do?\n"
+    gameResults += "http://theasylm.github.io/gauntletle/?p=" + encode()
+    navigator.clipboard.writeText(gameResults)
+    let span = document.getElementById('copiedResultsMessage')
+    let classes = span.className
+    span.className += 'shown'
+    setTimeout(() => {
+      span.className = classes
+    }, 2000)
+  }
+
+  const getPlayerGuess = function(board,guess) {
+    let s = ''
+    let g = allGuesses.value[board][guess]
+    for ( let i=0; i < g.length; i++ ){
+      s += g[i]['letter']
+    }
+    return s
+  }
+
+  const getPlayerGuessCount = function(board) {
+    let guesses = allGuesses.value[board]
+    let playerGuess = ''
+    for ( let i=0; i < guesses.length; i++ ) {
+      if ( ( board != 0 && i == 0 ) || ( board == 4 && i < 4 ))
+        continue
+
+      playerGuess = getPlayerGuess(board,i)
+      if ( playerGuess == '' ) {
+        return i
+      }
+    }
+    if ( playerGuess == words[board] ) {
+      return 6
+    } else {
+      return 0
+    }
+  }
 </script>
 
 <template>
@@ -686,6 +774,8 @@
           <span class="solution-word" v-for="(word,i) in words">{{i + 1}}: {{word.toUpperCase()}}</span>
         </div>
         <button class="btn btn-primary" @click="playAgain">Play Again</button>
+        <button class="btn btn-primary share-button" @click="copyResults">Share results</button><br/>
+          <span id="copiedResultsMessage">Copied!</span>
       </div>
     </vue-final-modal>
     <vue-final-modal
@@ -795,8 +885,11 @@
     opacity: 0;
     animation: fade 2s linear forwards;
   }
+  #copiedResultsMessage {
+    margin-left: 8rem;
+  }
   .share-button {
-    margin-top: 2rem;
+    margin-left: 2rem;
   }
   .close-modal-div, .reset-modal {
     position: absolute;
