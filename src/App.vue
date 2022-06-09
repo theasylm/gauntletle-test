@@ -4,7 +4,7 @@
   import CryptoJS from 'crypto-js'
   import Board from './components/Board.vue'
   import Keyboard from './components/Keyboard.vue'
-  import { PencilIcon, QuestionMarkCircleIcon, LightBulbIcon, XIcon, ChartBarIcon, RefreshIcon } from '@heroicons/vue/outline'
+  import { PencilIcon, QuestionMarkCircleIcon, LightBulbIcon, XIcon, ChartBarIcon, RefreshIcon, EyeIcon } from '@heroicons/vue/outline'
   import { acceptedWordList } from './assets/js/accepted_word_list.js'
   import { wordList } from './assets/js/wordlist.js'
 
@@ -381,6 +381,11 @@
   let correct = ref(false)
   let notInDictionary = ref(false)
   let gaveUp = ref(false)
+  let word1Revealed = ref(false)
+  let word2Revealed = ref(false)
+  let word3Revealed = ref(false)
+  let word4Revealed = ref(false)
+  let word5Revealed = ref(false)
   let newWord1 = ref('')
   let newWord2 = ref('')
   let newWord3 = ref('')
@@ -696,6 +701,11 @@
     loadGuesses()
     showWinModal.value = false
     fromC = false
+    word1Revealed.value = false
+    word2Revealed.value = false
+    word3Revealed.value = false
+    word4Revealed.value = false
+    word5Revealed.value = false
   }
 
   const giveUp = function() {
@@ -898,9 +908,48 @@
       </div>
       <span class="modal__title" id="win-msg">{{msg}}</span>
       <div class="modal__content">
-        <div class="solution" v-if="finished && !correct">
-          Solutions:
-          <span class="solution-word" v-for="(word,i) in words">{{i + 1}}: {{word.toUpperCase()}}</span>
+        <div class="solution-wrap" v-if="finished && !correct">
+          <h3>Solutions:</h3>
+          <div class="solution">
+            <span class="solution-board">1:</span>
+            <span class="solution-word" :class="{'revealed': word1Revealed }">{{words[0].toUpperCase()}}
+            </span>
+            <span class="reveal-word">
+              <EyeIcon @click="word1Revealed = true"></EyeIcon>
+            </span>
+          </div>
+          <div class="solution">
+            <span class="solution-board">2:</span>
+            <span class="solution-word" :class="{'revealed': word2Revealed }">{{words[1].toUpperCase()}}
+            </span>
+            <span class="reveal-word">
+              <EyeIcon @click="word2Revealed = true"></EyeIcon>
+            </span>
+          </div>
+          <div class="solution">
+            <span class="solution-board">3:</span>
+            <span class="solution-word" :class="{'revealed': word3Revealed }">{{words[2].toUpperCase()}}
+            </span>
+            <span class="reveal-word">
+              <EyeIcon @click="word3Revealed = true"></EyeIcon>
+            </span>
+          </div>
+          <div class="solution">
+            <span class="solution-board">4:</span>
+            <span class="solution-word" :class="{'revealed': word4Revealed }">{{words[3].toUpperCase()}}
+            </span>
+            <span class="reveal-word">
+              <EyeIcon @click="word4Revealed = true"></EyeIcon>
+            </span>
+          </div>
+          <div class="solution">
+            <span class="solution-board">5:</span>
+            <span class="solution-word" :class="{'revealed': word5Revealed }">{{words[4].toUpperCase()}}
+            </span>
+            <span class="reveal-word">
+              <EyeIcon @click="word5Revealed = true"></EyeIcon>
+            </span>
+          </div>
         </div>
         <button class="btn btn-primary" @click="playAgain">Play Again</button>
         <button class="btn btn-primary share-button" @click="copyResults">Share results</button><br/>
@@ -1155,10 +1204,27 @@
   #boardsNav {
     margin-bottom: 1rem;
   }
-  .solution {
+  .solution-wrap {
     font-size: 1.5rem;
     font-weight: 500;
     padding-bottom: 1rem;
+  }
+  .solution-board {
+    display: inline-block;
+    width: 4rem;
+  }
+  .solution-word {
+    width: 10rem;
+    display: inline-block;
+    background-color: #efefef;
+  }
+  .solution-word.revealed {
+    background-color: #011637;
+  }
+  .reveal-word {
+    display: inline-block;
+    width: 2.5rem;
+    margin-left: 1rem;
   }
   @keyframes fade {
     0%,100% { opacity: 0 }
@@ -1198,9 +1264,6 @@
   #win-msg {
     font-size:  2.25rem;
     margin-bottom: 1.5rem;
-  }
-  .solution-word {
-    display: block;
   }
   .give-up-icon {
     color:  #842029;
