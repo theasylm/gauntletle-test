@@ -732,7 +732,7 @@
     if ( fromC ) {
       gameResults += window.location
     } else {
-      gameResults += "http://theasylm.github.io/gauntletle/?p=" + encodeGame()
+      gameResults += "https://theasylm.github.io/gauntletle/?p=" + encodeGame()
     }
     navigator.clipboard.writeText(gameResults)
     let span = document.getElementById('copiedResultsMessage')
@@ -789,7 +789,7 @@
     if ( formInvalid.value ){
       return
     }
-    let url = "http://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    let url = "https://theasylm.github.io/gauntletle/?c=" + encodeCustom()
     window.open(url, '_blank');
   }
 
@@ -797,7 +797,7 @@
     if ( formInvalid.value ){
       return
     }
-    let text = "Try my custom Gauntletle!\nhttp://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    let text = "Try my custom Gauntletle!\nhttps://theasylm.github.io/gauntletle/?c=" + encodeCustom()
     navigator.clipboard.writeText(text)
     let span = document.getElementById('copiedMessage')
     let classes = span.className
@@ -811,7 +811,7 @@
     if ( formInvalid.value ){
       return
     }
-    let url = "http://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    let url = "https://theasylm.github.io/gauntletle/?c=" + encodeCustom()
     navigator.clipboard.writeText(url)
     let span = document.getElementById('copiedJustMessage')
     let classes = span.className
