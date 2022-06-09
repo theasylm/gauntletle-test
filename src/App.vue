@@ -1,6 +1,7 @@
 <script setup>
   import { $vfm, VueFinalModal, ModalsContainer } from 'vue-final-modal'
   import { ref, onUnmounted, onMounted, computed } from 'vue'
+  import CryptoJS from 'crypto-js'
   import Board from './components/Board.vue'
   import Keyboard from './components/Keyboard.vue'
   import { PencilIcon, QuestionMarkCircleIcon, LightBulbIcon, XIcon, ChartBarIcon, RefreshIcon } from '@heroicons/vue/outline'
@@ -92,11 +93,11 @@
     return fairAnswers[Math.floor(Math.random() * fairAnswers.length)];
   }
 
-  const encode = function() {
+  const encodeGame = function() {
     let buffer = new ArrayBuffer(10)
     let bufferView16 = new Uint16Array(buffer)
-    for ( let i=0; i < words.length; i++ ){
-      bufferView16[i] = wordList.indexOf(words[i])
+    for ( let i=0; i < words.value.length; i++ ){
+      bufferView16[i] = wordList.indexOf(words.value[i])
     }
     let bufferView8 = new Uint8Array(buffer)
     let binary = '';
@@ -104,11 +105,12 @@
     for (let i = 0; i < len; i++) {
       binary += String.fromCharCode(bufferView8[i]);
     }
-    return window.btoa(binary).replace('+', '-').replace('/', '_').replace(/=+$/, '')
+    let s = window.btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
+    return s
   }
 
-  const decode = function(encoded) {
-    encoded = encoded.replace('-', '+').replace('_', '/')
+  const decodeGame = function(encoded) {
+    encoded = encoded.replaceAll('-', '+').replaceAll('_', '/')
     while (encoded.length % 4)
       encoded += '='
     let decoded = window.atob(encoded)
@@ -120,35 +122,56 @@
     return new Uint16Array(decoded8.buffer);
   }
 
-  const genNewWords = function() {
-    while ( words.length < 5 ){
-      words = []
+  const encodeCustom = function() {
+    let s = newWord1.value.toLowerCase() + '|' + newWord2.value.toLowerCase() + '|' + newWord3.value.toLowerCase() + '|' + newWord4.value.toLowerCase() + '|' + newWord5.value.toLowerCase()
+    return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(s))
+  }
 
-      while ( words.length < 4 ) {
+  const decodeCustom = function(s) {
+    return CryptoJS.enc.Base64.parse(s).toString(CryptoJS.enc.Utf8).split('|')
+  }
+
+  const genNewWords = function() {
+    while ( words.value.length < 5 ){
+      words.value.length = 0
+
+      while ( words.value.length < 4 ) {
         let word = wordList[getRandomInt()]
-        if ( !words.includes(word) ) {
-          words.push(word)
+        if ( !words.value.includes(word) ) {
+          words.value.push(word)
         }
       }
-      let fair = GetFairAnswer(wordList,words)
+      let fair = GetFairAnswer(wordList,words.value)
       if ( fair != '' ) {
-        words.push(fair)
+        words.value.push(fair)
       }
     }
   }
 
   const loadWords = function(p) {
-    let a = decode(p)
+    let a = decodeGame(p)
     for (let i=0; i < 5; i++){
-      words[i] = wordList[a[i]]
+      words.value[i] = wordList[a[i]]
     }
   }
 
-  let words = []
+  const loadCustom = function(c) {
+    let a = decodeCustom(c)
+    for (let i=0; i < 5; i++){
+      words.value[i] = a[i]
+    }
+  }
+
+  let words = ref(Array())
 
   let p = (new URL(document.location)).searchParams.get('p')
+  let c = (new URL(document.location)).searchParams.get('c')
+  let fromC = false
   if ( p ) {
     loadWords(p)
+  } else if ( c ){
+    loadCustom(c)
+    fromC = true
   } else {
     genNewWords()
   }
@@ -307,29 +330,30 @@
     ]
   ])
 
-  const wordLength = words[0].length > 0 ? words[0].length : 0
+  const wordLength = 5
   let numberOfGuesses = 6
   let showWinModal = ref(false)
   let showHelpModal = ref(false)
   let showConfirmModal = ref(false)
+  let showFormModal = ref(false)
   let allGuesses = ref(Array())
 
   const loadGuesses = function() {
     allGuesses.value.length = 0
     allGuesses.value.push([])
-    for ( let i=1; i < words.length; i++ ) {
+    for ( let i=1; i < words.value.length; i++ ) {
       let guesses = []
-      if ( i < words.length - 1 ) {
+      if ( i < words.value.length - 1 ) {
         let letters = []
         for ( let x=0; x < wordLength; x++ ) {
-          letters.push({ 'letter': words[i-1].charAt(x), 'state': 0, 'initialized': true, 'colored': true })
+          letters.push({ 'letter': words.value[i-1].charAt(x), 'state': 0, 'initialized': true, 'colored': true })
         }
         guesses.push(letters)
       } else {
-        for ( let x=0; x < words.length - 1; x++ ){
+        for ( let x=0; x < words.value.length - 1; x++ ){
           let guess = []
           for ( let j=0; j < wordLength; j++ ) {
-            guess.push({ 'letter': words[x].charAt(j), 'state': 0, 'initialized': true, 'colored': true })
+            guess.push({ 'letter': words.value[x].charAt(j), 'state': 0, 'initialized': true, 'colored': true })
           }
           guesses.push(guess)
         }
@@ -353,19 +377,15 @@
   let guessCounts = ref(Array())
   let givenWordCount = 0
   let currentPosition = ref(0)
-  let gameResults = ref('')
   let finished = ref(false)
   let correct = ref(false)
   let notInDictionary = ref(false)
   let gaveUp = ref(false)
-  let totalWins = ref(0)
-  let totalGames = ref(0)
-  let currentStreak = ref(0)
-  let maxStreak = ref(0)
-  let remainingHours = ref(0)
-  let remainingMinutes = ref(0)
-  let remainingSeconds = ref(0)
-  let showModal = ref(false)
+  let newWord1 = ref('')
+  let newWord2 = ref('')
+  let newWord3 = ref('')
+  let newWord4 = ref('')
+  let newWord5 = ref('')
   let msg = computed(() => {
     if ( !finished.value ) {
       return ''
@@ -425,8 +445,59 @@
     return true
   })
 
+  let newWord1Invalid = computed(() => {
+    return newWord1.value.length != 5 || !newWord1.value.match(/^[a-zA-Z]+$/)
+  })
+  let newWord2Invalid = computed(() => {
+    return newWord2.value.length != 5 || !newWord2.value.match(/^[a-zA-Z]+$/)
+  })
+  let newWord3Invalid = computed(() => {
+    return newWord3.value.length != 5 || !newWord3.value.match(/^[a-zA-Z]+$/)
+  })
+  let newWord4Invalid = computed(() => {
+    return newWord4.value.length != 5 || !newWord4.value.match(/^[a-zA-Z]+$/)
+  })
+  let newWord5Invalid = computed(() => {
+    return newWord5.value.length != 5 || !newWord5.value.match(/^[a-zA-Z]+$/)
+  })
+
+  let formInvalid = computed(() => {
+    return newWord1Invalid.value || newWord2Invalid.value || newWord3Invalid.value || newWord4Invalid.value || newWord5Invalid.value
+  })
+
+  let newWord1NotInDictionary = computed(() => {
+    if (newWord1.value.length != 5) {
+      return false
+    }
+    return ( !acceptedWordList.includes(newWord1.value.toUpperCase()) )
+  })
+  let newWord2NotInDictionary = computed(() => {
+    if (newWord2.value.length != 5) {
+      return false
+    }
+    return ( !acceptedWordList.includes(newWord2.value.toUpperCase()) )
+  })
+  let newWord3NotInDictionary = computed(() => {
+    if (newWord3.value.length != 5) {
+      return false
+    }
+    return ( !acceptedWordList.includes(newWord3.value.toUpperCase()) )
+  })
+  let newWord4NotInDictionary = computed(() => {
+    if (newWord4.value.length != 5) {
+      return false
+    }
+    return ( !acceptedWordList.includes(newWord4.value.toUpperCase()) )
+  })
+  let newWord5NotInDictionary = computed(() => {
+    if (newWord5.value.length != 5) {
+      return false
+    }
+    return ( !acceptedWordList.includes(newWord5.value.toUpperCase()) )
+  })
+
   const completeRow = function(skipAnimation,skipKeyboard) {
-    let word = words[currentGame.value]
+    let word = words.value[currentGame.value]
     let skip = skipAnimation ? 0 : 1
     let guess = allGuesses.value[currentGame.value][currentGuess.value]
     for ( let i = 0; i < guess.length; i++){
@@ -471,7 +542,7 @@
     }, 300 * guess.length * skip)
 
     if ( correct.value ) {
-      if (currentGame.value == words.length - 1){
+      if (currentGame.value == words.value.length - 1){
         finished.value = true
         currentPosition.value = -1
         currentGuess.value = -1
@@ -550,7 +621,7 @@
   })
 
   const onKey = function(key) {
-    if (showModal.value || finished.value ) {
+    if (showWinModal.value || showHelpModal.value || showConfirmModal.value || showFormModal.value || finished.value ) {
       return
     }
     if (/^[a-zA-Z_\-]$/.test(key)) {
@@ -595,7 +666,7 @@
       return false
     }
     let playerAnswer = allGuesses.value[currentGame.value][currentGuess.value].map((e) => e['letter']).join('')
-    if ( words[currentGame.value] == playerAnswer ){
+    if ( words.value[currentGame.value] == playerAnswer ){
       return false
     }
 
@@ -620,10 +691,11 @@
     currentPosition.value = 0
     correct.value = false
     finished.value = false
-    words = []
+    words.value.length = 0
     genNewWords()
     loadGuesses()
     showWinModal.value = false
+    fromC = false
   }
 
   const giveUp = function() {
@@ -647,7 +719,7 @@
   }
 
   const copyResults = function() {
-    let gameResults = "Gauntletle Results\n"
+    let gameResults = ( fromC ? "Custom" : "Infinite" ) + " Gauntletle Results\n"
     let count = getPlayerGuessCount(0)
     gameResults += "1: " + ( count > 0 ? count : 'X' ) + "/6\n"
     for ( let i=1; i < 4; i++ ) {
@@ -657,7 +729,11 @@
     count = getPlayerGuessCount(4) - 4
     gameResults += "5: " + ( count > 0 ? count : 'X' ) + "/2\n"
     gameResults += "How well can you do?\n"
-    gameResults += "http://theasylm.github.io/gauntletle/?p=" + encode()
+    if ( fromC ) {
+      gameResults += window.location
+    } else {
+      gameResults += "http://theasylm.github.io/gauntletle/?p=" + encodeGame()
+    }
     navigator.clipboard.writeText(gameResults)
     let span = document.getElementById('copiedResultsMessage')
     let classes = span.className
@@ -688,11 +764,61 @@
         return i
       }
     }
-    if ( playerGuess == words[board] ) {
+    if ( playerGuess == words.value[board] ) {
       return 6
     } else {
       return 0
     }
+  }
+
+  const showForm = function() {
+    showFormModal.value = true
+    setTimeout(() => {document.getElementById('word1').focus()},350)
+  }
+
+  const clearForm = function() {
+    newWord1.value = ''
+    newWord2.value = ''
+    newWord3.value = ''
+    newWord4.value = ''
+    newWord5.value = ''
+    setTimeout(() => {document.getElementById('word1').focus()},350)
+  }
+
+  const gotoUrl = function() {
+    if ( formInvalid.value ){
+      return
+    }
+    let url = "http://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    window.open(url, '_blank');
+  }
+
+  const copyShare = function() {
+    if ( formInvalid.value ){
+      return
+    }
+    let text = "Try my custom Gauntletle!\nhttp://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    navigator.clipboard.writeText(text)
+    let span = document.getElementById('copiedMessage')
+    let classes = span.className
+    span.className += 'shown'
+    setTimeout(() => {
+      span.className = classes
+    }, 2000)
+  }
+
+  const copyUrl = function() {
+    if ( formInvalid.value ){
+      return
+    }
+    let url = "http://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    navigator.clipboard.writeText(url)
+    let span = document.getElementById('copiedJustMessage')
+    let classes = span.className
+    span.className += 'shown'
+    setTimeout(() => {
+      span.className = classes
+    }, 2000)
   }
 </script>
 
@@ -700,6 +826,9 @@
   <div class="container wrap">
     <div class="header row">
       <div class="col-md-3">
+        <button @click="showForm" class="new-button btn btn-primary">
+          <PencilIcon></PencilIcon>New Custom
+        </button>
       </div>
       <div class="col-md-6">
         <span class="title">Gauntletle</span>
@@ -815,29 +944,119 @@
         content-class="modal-content"
         :max-width="600"
       >
-        <div class="close-modal-div">
-          <XIcon @click="showHelpModal = false"></XIcon>
-        </div>
-        <div class="modal__content">
-          <h2>How to Play</h2>
-          <div class="mb-3 row">
-            <div class="col-sm-12">
-              Guess the five words in the given number of tries. After each guess, the tiles will be colored to indicate how close to the target word your guess was.
-              <img src="./assets/green_clue.png"/>
-              Green indicates the N is in the correct spot.
-              <img src="./assets/yellow_clue.png"/>
-              Yellow indicates the U is in the word, but in another position.
-              <p><img src="./assets/grey_clue.png"/>
-              Grey indicates the P is not in the word.</p>
-              <p>After the first word, you will be seeded with the previous word as your starting guess.</p>
-              <p>On the final word, you will be seeded with the previous four words as starting guesses.</p>
-              <p>If you wish to give up, you can hit the red X. You will be asked to confirm your decision.</p>
-              <hr/>
-              <small>Special thanks for Rangsk for the extra code!</small>
-            </div>
+      <div class="close-modal-div">
+        <XIcon @click="showHelpModal = false"></XIcon>
+      </div>
+      <div class="modal__content">
+        <h2>How to Play</h2>
+        <div class="mb-3 row">
+          <div class="col-sm-12">
+            Guess the five words in the given number of tries. After each guess, the tiles will be colored to indicate how close to the target word your guess was.
+            <img src="./assets/green_clue.png"/>
+            Green indicates the N is in the correct spot.
+            <img src="./assets/yellow_clue.png"/>
+            Yellow indicates the U is in the word, but in another position.
+            <p><img src="./assets/grey_clue.png"/>
+            Grey indicates the P is not in the word.</p>
+            <p>After the first word, you will be seeded with the previous word as your starting guess.</p>
+            <p>On the final word, you will be seeded with the previous four words as starting guesses.</p>
+            <p>If you wish to give up, you can hit the red X. You will be asked to confirm your decision.</p>
+            <hr/>
           </div>
         </div>
-      </vue-final-modal>
+        <h2>How to Create</h2>
+        <div class="row">
+          <div class="col-sm-12">
+            <p>Create a custom Gauntletle by clicking the New Custom button. Then you will be asked to enter the five words to be guessed in order.</p>
+            <p>
+              Once you've filled in all the words, hit either the 'Go to Puzzle' button (good for testing your puzzle); the 'Share Link' button, which will copy the puzzle link with a handy message ready for pasting in chat, email, or wherever; or the 'Copy Link' button, which will copy just the link to the puzzle.</p>
+            <hr class="with-bottom"/>
+            <p class="no-bottom">Special thanks for Rangsk for the extra code!</p>
+          </div>
+        </div>
+      </div>
+    </vue-final-modal>
+    <vue-final-modal
+      name="newWordle"
+      classes="modal-container newModal"
+      :click-to-close="false"
+      :esc-to-close="true"
+      v-model="showFormModal"
+      content-class="modal-content"
+      :max-width="500"
+    >
+      <div class="formIcons">
+        <div class="reset-modal">
+          <RefreshIcon @click="clearForm"></RefreshIcon>
+        </div>
+        <div class="close-modal-div">
+         <XIcon @click="showFormModal = false"></XIcon>
+       </div>
+      </div>
+      <span class="modal__title">New Custom Gauntletle</span>
+      <div class="modal__content">
+        <div class="mb-3 row">
+          <div class="col-sm-4 col-form-label">
+            <label for="word1">Word 1</label>
+          </div>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" id="word1" v-model="newWord1" :class="{'has-error': newWord1Invalid }"/>
+            <span class="new-word-warning-message" :class="{'shown': newWord1NotInDictionary }">Warning: word not in dictionary.</span>
+          </div>
+        </div>
+        <div class="mb-3 row">
+          <div class="col-sm-4 col-form-label">
+            <label for="word2">Word 2</label>
+          </div>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" id="word2" v-model="newWord2" :class="{'has-error': newWord2Invalid }"/>
+            <span class="new-word-warning-message" :class="{'shown': newWord2NotInDictionary }">Warning: word not in dictionary.</span>
+          </div>
+        </div>
+        <div class="mb-3 row">
+          <div class="col-sm-4 col-form-label">
+            <label for="word3">Word 3</label>
+          </div>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" id="word3" v-model="newWord3" :class="{'has-error': newWord3Invalid }"/>
+            <span class="new-word-warning-message" :class="{'shown': newWord3NotInDictionary }">Warning: word not in dictionary.</span>
+          </div>
+        </div>
+        <div class="mb-3 row">
+          <div class="col-sm-4 col-form-label">
+            <label for="word4">Word 4</label>
+          </div>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" id="word4" v-model="newWord4" :class="{'has-error': newWord4Invalid }"/>
+            <span class="new-word-warning-message" :class="{'shown': newWord4NotInDictionary }">Warning: word not in dictionary.</span>
+          </div>
+        </div>
+        <div class="mb-3 row">
+          <div class="col-sm-4 col-form-label">
+            <label for="word5">Word 5</label>
+          </div>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" id="word5" v-model="newWord5" :class="{'has-error': newWord5Invalid }"/>
+            <span class="new-word-warning-message" :class="{'shown': newWord5NotInDictionary }">Warning: word not in dictionary.</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal__action">
+        <div class="mb-3 row">
+          <div class="col-4">
+            <button @click="gotoUrl" class="btn btn-primary" :disabled="formInvalid">Go to Puzzle</button>
+          </div>
+          <div class="col-4">
+            <button @click="copyShare" class="btn btn-primary" :disabled="formInvalid">Share Link</button><br/>
+            <span id="copiedMessage">Copied!</span>
+          </div>
+          <div class="col-4">
+            <button @click="copyUrl" class="btn btn-primary" :disabled="formInvalid">Copy Link</button><br/>
+            <span id="copiedJustMessage">Copied!</span>
+          </div>
+        </div>
+      </div>
+    </vue-final-modal>
   </div>
 </template>
 
@@ -1004,6 +1223,19 @@
     font-size: smaller;
     width: 100%;
     left: 0;
+  }
+  .new-word-warning-message {
+    visibility: hidden;
+    color: #ffc107;
+  }
+  .new-word-warning-message.shown {
+    visibility: visible;
+  }
+  hr.with-bottom {
+    margin-bottom: 1rem;
+  }
+  .no-bottom {
+    margin-bottom: 0;
   }
 </style>
 <style scoped>
