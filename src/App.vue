@@ -4,7 +4,7 @@
   import CryptoJS from 'crypto-js'
   import Board from './components/Board.vue'
   import Keyboard from './components/Keyboard.vue'
-  import { PencilIcon, QuestionMarkCircleIcon, LightBulbIcon, XIcon, ChartBarIcon, RefreshIcon, EyeIcon } from '@heroicons/vue/outline'
+  import { PencilIcon, QuestionMarkCircleIcon, LightBulbIcon, XIcon, ChartBarIcon, RefreshIcon, EyeIcon, CogIcon } from '@heroicons/vue/outline'
   import { acceptedWordList } from './assets/js/accepted_word_list.js'
   import { wordList } from './assets/js/wordlist.js'
 
@@ -336,6 +336,7 @@
   let showHelpModal = ref(false)
   let showConfirmModal = ref(false)
   let showFormModal = ref(false)
+  let showSettingsModal = ref(false)
   let allGuesses = ref(Array())
 
   const loadGuesses = function() {
@@ -391,6 +392,8 @@
   let newWord3 = ref('')
   let newWord4 = ref('')
   let newWord5 = ref('')
+  let reveal = window.localStorage.getItem('revealNonAnswer') || 'none'
+  let revealNonAnswer = ref(reveal)
   let msg = computed(() => {
     if ( !finished.value ) {
       return ''
@@ -682,6 +685,24 @@
     return !acceptedWordList.includes(playerAnswer.toUpperCase())
   })
 
+  const guessNotInAnswerList = computed(() => {
+    if ( revealNonAnswer.value == 'none' || (revealNonAnswer.value == 'last' && currentGame.value != 4 )) {
+      return false
+    }
+    if ( currentGame.value < 0 || currentGame.value > 4 || currentGuess.value < 0 || finished.value ){
+      return false
+    }
+    let playerAnswer = allGuesses.value[currentGame.value][currentGuess.value].map((e) => e['letter']).join('')
+    if ( words.value[currentGame.value] == playerAnswer || guessNotInDictionary.value ){
+      return false
+    }
+    if ( playerAnswer.length != wordLength || playerAnswer.match(/_/) ) {
+      return false
+    }
+
+    return !wordList.includes(playerAnswer)
+  })
+
   const showWordMissingMessage = function() {
     notInDictionary.value = true
     setTimeout(() => {
@@ -830,6 +851,10 @@
       span.className = classes
     }, 2000)
   }
+
+  const updateRevealNonAnswer = function () {
+    window.localStorage.setItem('revealNonAnswer',revealNonAnswer.value)
+  }
 </script>
 
 <template>
@@ -847,10 +872,11 @@
         <XIcon class="give-up-icon" @click="showConfirmModal = (true && !finished)"></XIcon>
         <ChartBarIcon @click="openWinModal" :class="{ inactive: !finished }" ></ChartBarIcon>
         <QuestionMarkCircleIcon @click="showHelpModal = true"></QuestionMarkCircleIcon>
+        <CogIcon @click="showSettingsModal = true"></CogIcon>
       </div>
     </div>
     <div class="info">
-      <h5 class="warning-message" :class="{'shown': notInDictionary}">Word not in dictionary.</h5>
+      <h5 class="warning-message" :class="{'shown': guessNotInDictionary || guessNotInAnswerList }">Word not in {{guessNotInDictionary ? 'dictionary' : 'answer list'}}.</h5>
     </div>
     <div class="row">
       <div class="col-2"></div>
@@ -874,19 +900,19 @@
       <div class="col-2"></div>
       <div class="tab-content" id="boards">
         <div class="tab-pane fade" :class="{'active': currentGame == 0, 'show': currentGame == 0}" id="board-one-pane" role="tabpanel" aria-labelledby="board-one" tabindex="-1">
-          <Board :guesses="allGuesses[0]" :guessNotInDictionary="guessNotInDictionary" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
+          <Board :guesses="allGuesses[0]" :guessNotInDictionary="guessNotInDictionary" :guessNotInAnswerList="guessNotInAnswerList" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
         </div>
         <div class="tab-pane fade" :class="{'active': currentGame == 1, 'show': currentGame == 1}" id="board-two-pane" role="tabpanel" aria-labelledby="board-two" tabindex="-1">
-          <Board :guesses="allGuesses[1]" :guessNotInDictionary="guessNotInDictionary" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
+          <Board :guesses="allGuesses[1]" :guessNotInDictionary="guessNotInDictionary" :guessNotInAnswerList="guessNotInAnswerList" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
         </div>
         <div class="tab-pane fade" :class="{'active': currentGame == 2, 'show': currentGame == 2}" id="board-three-pane" role="tabpanel" aria-labelledby="board-three" tabindex="-1">
-          <Board :guesses="allGuesses[2]" :guessNotInDictionary="guessNotInDictionary" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
+          <Board :guesses="allGuesses[2]" :guessNotInDictionary="guessNotInDictionary" :guessNotInAnswerList="guessNotInAnswerList" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
         </div>
         <div class="tab-pane fade" :class="{'active': currentGame == 3, 'show': currentGame == 3}" id="board-four-pane" role="tabpanel" aria-labelledby="board-four" tabindex="-1">
-          <Board :guesses="allGuesses[3]" :guessNotInDictionary="guessNotInDictionary" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
+          <Board :guesses="allGuesses[3]" :guessNotInDictionary="guessNotInDictionary" :guessNotInAnswerList="guessNotInAnswerList" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
         </div>
         <div class="tab-pane fade" :class="{'active': currentGame == 4, 'show': currentGame == 4}" id="board-five-pane" role="tabpanel" aria-labelledby="board-five" tabindex="-1">
-          <Board :guesses="allGuesses[4]" :guessNotInDictionary="guessNotInDictionary" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
+          <Board :guesses="allGuesses[4]" :guessNotInDictionary="guessNotInDictionary" :guessNotInAnswerList="guessNotInAnswerList" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
         </div>
       </div>
     </div>
@@ -1106,6 +1132,45 @@
         </div>
       </div>
     </vue-final-modal>
+    <vue-final-modal
+      name="settingsModal"
+      classes="modal-container"
+      :click-to-close="false"
+      :esc-to-close="true"
+      v-model="showSettingsModal"
+      content-class="modal-content"
+      :max-width="500"
+    >
+      <div class="close-modal-div">
+        <XIcon @click="showSettingsModal = false"></XIcon>
+      </div>
+      <span class="modal__title">Settings</span>
+      <div class="modal__content settings">
+        <div class="row">
+          <div class="col-6">Reveal which words aren't on the answer list on:</div>
+          <div class="col-6">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="reveal-non-answer" id="reveal-non-answer-none" value="none" v-model="revealNonAnswer" @change="updateRevealNonAnswer">
+              <label class="form-check-label" for="reveal-non-answer-none">
+                No boards
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="reveal-non-answer" id="reveal-non-answer-last" value="last" v-model="revealNonAnswer" @change="updateRevealNonAnswer">
+              <label class="form-check-label" for="reveal-non-answer-last">
+                Only last board
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="reveal-non-answer" id="reveal-non-answer-all" value="all" v-model="revealNonAnswer" @change="updateRevealNonAnswer">
+              <label class="form-check-label" for="reveal-non-answer-all">
+                All boards
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </vue-final-modal>
   </div>
 </template>
 
@@ -1200,6 +1265,9 @@
     border: none;
     opacity: 1;
     margin-bottom: 0;
+  }
+  .settings {
+    text-align: left;
   }
   #boardsNav {
     margin-bottom: 1rem;

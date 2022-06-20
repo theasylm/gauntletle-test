@@ -19,7 +19,6 @@
     keyboard: Boolean,
     initialized: Boolean,
     colored: Boolean,
-    guessNotInDictionary: Boolean,
     currentPosition: Number,
     currentGuess: Number,
     guessNumber: Number,
