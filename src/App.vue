@@ -392,7 +392,7 @@
   let newWord3 = ref('')
   let newWord4 = ref('')
   let newWord5 = ref('')
-  let reveal = window.localStorage.getItem('revealNonAnswer') || 'none'
+  let reveal = window.localStorage.getItem('revealNonAnswer') || 'last'
   let revealNonAnswer = ref(reveal)
   let msg = computed(() => {
     if ( !finished.value ) {
