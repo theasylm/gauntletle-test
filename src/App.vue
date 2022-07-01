@@ -80,17 +80,74 @@
 
     let fairAnswers = [];
     for (let [_, answers] of colorsMap) {
-        if (answers.length > 1 && answers.length <= 4) {
-            fairAnswers.push.apply(fairAnswers, answers);
+      if (answers.length > 1 && answers.length <= 4) {
+        fairAnswers.push(answers)
+      }
+    }
+
+    if ( fairAnswers.length == 0 ){
+      return []
+    }
+
+    fairAnswers = shuffle(fairAnswers)
+    for ( let answers of fairAnswers ) {
+      let victory = GetVictoryWords(wordList,answers)
+      if ( victory.length > 0 ){
+        if ( adversarial.value < 2 ) {
+          return answers
+        } else {
+          if ( victory.length < 10 ) {
+            return [answers,victory]
+          }
+        }
+      }
+    }
+
+    return []
+  }
+
+  function shuffle(array) {
+    let currentIndex = array.length,  randomIndex;
+
+    // While there remain elements to shuffle.
+    while (currentIndex != 0) {
+
+      // Pick a remaining element.
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
+    }
+
+    return array;
+  }
+
+  const getRandomItem = iterable => iterable.get([...iterable.keys()][Math.floor(Math.random() * iterable.size)])
+
+  function GetVictoryWords(answerList, possibleAnswers) {
+    // If there are no answers left, return an empty list
+    if (possibleAnswers.length == 0) {
+        return [];
+    }
+
+    // Find which words are a path to victory
+    // These words have a different coloring for every filtered answer
+    let victoryWordList = [];
+    for (let guess of answerList) {
+        let colorsSeen = new Set();
+        for (let answer of possibleAnswers) {
+            let colors = CalculateWordColors(answer, guess);
+            colorsSeen.add(colors);
+        }
+
+        if (colorsSeen.size == possibleAnswers.length) {
+            victoryWordList.push(guess);
         }
     }
 
-    if (fairAnswers.length == 0) {
-        return '';
-    }
-
-    // Return a random fair answer
-    return fairAnswers[Math.floor(Math.random() * fairAnswers.length)];
+      return victoryWordList;
   }
 
   const encodeGame = function() {
@@ -141,9 +198,16 @@
           words.value.push(word)
         }
       }
-      let fair = GetFairAnswer(wordList,words.value)
-      if ( fair != '' ) {
-        words.value.push(fair)
+      let fairAnswers = GetFairAnswer(wordList,words.value)
+      if ( fairAnswers.length > 0 ) {
+        if ( adversarial.value > 1 ) {
+          words.value.push(fairAnswers[0])
+          victoryWords.value = fairAnswers[1]
+        } else if ( adversarial.value == 1 ) {
+          words.value.push(fairAnswers)
+        } else {
+          words.value.push([fairAnswers[Math.floor(Math.random() * fairAnswers.length)]])
+        }
       }
     }
   }
@@ -163,7 +227,9 @@
   }
 
   let words = ref(Array())
-
+  let victoryWords = ref(Array())
+  let adverseStored = window.localStorage.getItem('adversarial') || 0
+  let adversarial = ref(adverseStored)
   let p = (new URL(document.location)).searchParams.get('p')
   let c = (new URL(document.location)).searchParams.get('c')
   let fromC = false
@@ -504,8 +570,45 @@
     return ( !acceptedWordList.includes(newWord5.value.toUpperCase()) )
   })
 
+  const getAdverseWords = function(answerWords,playerGuess) {
+    let colorsMap = new Map();
+    for (let answer of answerWords) {
+      if ( answer == playerGuess ) {
+        continue
+      }
+      let answerColors = CalculateWordColors(answer, playerGuess)
+      if (colorsMap.has(answerColors)) {
+          colorsMap.get(answerColors).push(answer);
+      } else {
+          colorsMap.set(answerColors, [answer]);
+      }
+
+    }
+
+    let adverseWords = []
+    let maxLength = 0
+    for ( let [_, answers] of colorsMap ) {
+      if ( answers.length > maxLength ) {
+        adverseWords = [answers]
+        maxLength = answers.length
+      } else if ( answers.length == maxLength ) {
+        adverseWords.push(answers)
+      }
+    }
+
+    return {'max': maxLength, 'words': adverseWords }
+  }
+
   const completeRow = function(skipAnimation,skipKeyboard) {
-    let word = words.value[currentGame.value]
+    let word = ''
+    if ( currentGame.value != 4 ) {
+      word = words.value[currentGame.value]
+    } else {
+      if ( currentGuess.value < 4 || adversarial.value == 0 ) {
+        word = words.value[currentGame.value][0]
+      }
+    }
+
     let skip = skipAnimation ? 0 : 1
     let guess = allGuesses.value[currentGame.value][currentGuess.value]
     for ( let i = 0; i < guess.length; i++){
@@ -516,7 +619,36 @@
 
     let answerLetters = word.split('')
     let playerAnswer = guess.map((e) => e['letter']).join('')
+
+    if ( adversarial.value > 0 && currentGuess.value == 4 && currentGame.value == 4) {
+      let adverseWords = getAdverseWords(words.value[currentGame.value],playerAnswer)
+      if ( adverseWords['max'] == 1 ) {
+        word = adverseWords['words'][Math.floor(Math.random() * adverseWords['words'].length)][0]
+        words.value[4] = [word]
+      } else {
+        words.value[4] = adverseWords['words'][0]
+        word = adverseWords['words'][0][Math.floor(Math.random() * adverseWords['words'][0].length)]
+        console.log(word)
+      }
+    }
+
+    if ( adversarial.value > 0 && currentGuess.value == 5 ) {
+      if ( words.value[4].length == 1 ) {
+        word = words.value[4][0]
+      } else {
+        word = words.value[4][Math.floor(Math.random() * words.value[4].length)]
+        while ( word == playerAnswer ) {
+          word = words.value[4][Math.floor(Math.random() * words.value[4].length)]
+        }
+      }
+      words.value[4] = [word]
+    }
+
     correct.value = ( playerAnswer === word )
+    if ( adversarial.value == 3 & guessNotInAnswerList.value ) {
+      return
+    }
+
     if ( !correct.value && !acceptedWordList.includes(playerAnswer.toUpperCase()) && !skipAnimation ){
       showWordMissingMessage()
       return
@@ -855,6 +987,9 @@
   const updateRevealNonAnswer = function () {
     window.localStorage.setItem('revealNonAnswer',revealNonAnswer.value)
   }
+  const updateAdversarial = function () {
+    window.localStorage.setItem('adversarial',adversarial.value)
+  }
 </script>
 
 <template>
@@ -877,7 +1012,9 @@
     </div>
     <div class="info">
       <h5 class="warning-message" :class="{'shown': guessNotInDictionary || guessNotInAnswerList }">Word not in {{guessNotInDictionary ? 'dictionary' : 'answer list'}}.</h5>
-    </div>
+      <h5 v-if="adversarial == 3 && currentGame == 4">{{victoryWords.length}} path{{ victoryWords.length > 1 ? 's' : '' }} to victory</h5>
+
+   </div>
     <div class="row">
       <div class="col-2"></div>
       <ul class="nav nav-pills nav-justified col-8" id="boardsNav" role="tablist">
@@ -918,7 +1055,7 @@
     </div>
     <Keyboard :rows="keyboardRows"></Keyboard>
     <div class="footer">
-      Created by theasylm
+      Created by theasylm and Rangsk
     </div>
     <vue-final-modal
         name="winModal"
@@ -970,7 +1107,7 @@
           </div>
           <div class="solution">
             <span class="solution-board">5:</span>
-            <span class="solution-word" :class="{'revealed': word5Revealed }">{{words[4].toUpperCase()}}
+            <span class="solution-word" :class="{'revealed': word5Revealed }">{{words[4][0].toUpperCase()}}
             </span>
             <span class="reveal-word">
               <EyeIcon @click="word5Revealed = true"></EyeIcon>
@@ -1046,7 +1183,6 @@
             <p>
               Once you've filled in all the words, hit either the 'Go to Puzzle' button (good for testing your puzzle); the 'Share Link' button, which will copy the puzzle link with a handy message ready for pasting in chat, email, or wherever; or the 'Copy Link' button, which will copy just the link to the puzzle.</p>
             <hr class="with-bottom"/>
-            <p class="no-bottom">Special thanks for Rangsk for the extra code!</p>
           </div>
         </div>
       </div>
@@ -1165,6 +1301,35 @@
               <input class="form-check-input" type="radio" name="reveal-non-answer" id="reveal-non-answer-all" value="all" v-model="revealNonAnswer" @change="updateRevealNonAnswer">
               <label class="form-check-label" for="reveal-non-answer-all">
                 All boards
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">Adversarial mode:</div>
+          <div class="col-6">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="adversarial-mode" id="adversarial-mode-off" value="0" v-model="adversarial" @change="updateAdversarial">
+              <label class="form-check-label" for="adversarial-mode-no">
+                Off
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="adversarial-mode" id="adversarial-mode-on" value="1" v-model="adversarial" @change="updateAdversarial">
+              <label class="form-check-label" for="adversarial-mode-on">
+                On
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="adversarial-mode" id="adversarial-mode-hard" value="2" v-model="adversarial" @change="updateAdversarial">
+              <label class="form-check-label" for="adversarial-mode-hard">
+                Hard
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="adversarial-mode" id="adversarial-mode-ultra" value="3" v-model="adversarial" @change="updateAdversarial">
+              <label class="form-check-label" for="adversarial-mode-ultra">
+                Ultra
               </label>
             </div>
           </div>
