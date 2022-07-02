@@ -667,7 +667,7 @@
     }
 
     correct.value = ( playerAnswer === word )
-    if ( adversarial.value == 3 & guessNotInAnswerList.value && currentGuess.value == 5 && currentGame.value == 4) {
+    if ( adversarial.value == 3 && guessNotInAnswerList.value && currentGuess.value > 3 && currentGame.value == 4) {
       return
     }
 
