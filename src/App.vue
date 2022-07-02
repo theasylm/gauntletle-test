@@ -926,7 +926,7 @@
       if ( fromC.value ) {
         gameResults += window.location
       } else {
-        gameResults += "https://theasylm.github.io/gauntletle/?p=" + encodeGame()
+        gameResults += "https://theasylm.github.io/gauntletle-test/?p=" + encodeGame()
       }
     }
     navigator.clipboard.writeText(gameResults)
@@ -984,7 +984,7 @@
     if ( formInvalid.value ){
       return
     }
-    let url = "https://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    let url = "https://theasylm.github.io/gauntletle-test/?c=" + encodeCustom()
     window.open(url, '_blank');
   }
 
@@ -992,7 +992,7 @@
     if ( formInvalid.value ){
       return
     }
-    let text = "Try my custom Gauntletle!\nhttps://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    let text = "Try my custom Gauntletle!\nhttps://theasylm.github.io/gauntletle-test/?c=" + encodeCustom()
     navigator.clipboard.writeText(text)
     let span = document.getElementById('copiedMessage')
     let classes = span.className
@@ -1006,7 +1006,7 @@
     if ( formInvalid.value ){
       return
     }
-    let url = "https://theasylm.github.io/gauntletle/?c=" + encodeCustom()
+    let url = "https://theasylm.github.io/gauntletle-test/?c=" + encodeCustom()
     navigator.clipboard.writeText(url)
     let span = document.getElementById('copiedJustMessage')
     let classes = span.className
@@ -1039,7 +1039,8 @@
       <h5 class="warning-message" :class="{'shown': guessNotInDictionary || guessNotInAnswerList }">Word not in {{guessNotInDictionary ? 'dictionary' : 'answer list'}}.</h5>
       <!-- words: {{words}}<br/>
       victory: {{victoryWords}}<br/>
-      fair: {{fairAnswerWords}} -->
+      fair: {{fairAnswerWords}}<br/>
+      {{currentGame}} -->
    </div>
     <div class="row">
       <div class="col-2"></div>
@@ -1076,20 +1077,20 @@
         </div>
         <div class="tab-pane fade" :class="{'active': currentGame == 4, 'show': currentGame == 4}" id="board-five-pane" role="tabpanel" aria-labelledby="board-five" tabindex="-1">
           <Board :guesses="allGuesses[4]" :guessNotInDictionary="guessNotInDictionary" :guessNotInAnswerList="guessNotInAnswerList" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
+          <h5 class="paths" v-if="adversarial == 3 && currentGame == 4">{{victoryWords.length}} path{{ victoryWords.length > 1 ? 's' : '' }} to victory</h5>
+          <h5 class="victory" v-if="adversarial == 3 && currentGame == 4" :class="{'shown': finished }">
+            Victory words: <span class="victory-words" :class="{'revealed': victoryRevealed}">{{victoryWords.join(', ')}}</span>
+            <span class="reveal-word">
+              <EyeIcon @click="victoryRevealed = !victoryRevealed"></EyeIcon>
+            </span>
+          </h5>
+          <h5 v-if="finished && !fromC && !fromP && currentGame == 4">
+            Possible answers: <span class="fair-words" :class="{'revealed': fairRevealed}">{{fairAnswerWords.join(', ')}}</span>
+            <span class="reveal-word">
+              <EyeIcon @click="fairRevealed = !fairRevealed"></EyeIcon>
+            </span>
+          </h5>
         </div>
-        <h5 class="paths" v-if="adversarial == 3 && currentGame == 4">{{victoryWords.length}} path{{ victoryWords.length > 1 ? 's' : '' }} to victory</h5>
-        <h5 class="victory" v-if="adversarial == 3 && currentGame == 4" :class="{'shown': finished }">
-          Victory words: <span class="victory-words" :class="{'revealed': victoryRevealed}">{{victoryWords.join(', ')}}</span>
-          <span class="reveal-word">
-            <EyeIcon @click="victoryRevealed = true"></EyeIcon>
-          </span>
-        </h5>
-        <h5 v-if="finished && !fromC && !fromP">
-          Possible answers: <span class="fair-words" :class="{'revealed': fairRevealed}">{{fairAnswerWords.join(', ')}}</span>
-          <span class="reveal-word">
-            <EyeIcon @click="fairRevealed = true"></EyeIcon>
-          </span>
-        </h5>
       </div>
     </div>
     <Keyboard :rows="keyboardRows"></Keyboard>
@@ -1117,7 +1118,7 @@
             <span class="solution-word" :class="{'revealed': word1Revealed }">{{words[0].toUpperCase()}}
             </span>
             <span class="reveal-word">
-              <EyeIcon @click="word1Revealed = true"></EyeIcon>
+              <EyeIcon @click="word1Revealed = !word1Revealed"></EyeIcon>
             </span>
           </div>
           <div class="solution">
@@ -1125,7 +1126,7 @@
             <span class="solution-word" :class="{'revealed': word2Revealed }">{{words[1].toUpperCase()}}
             </span>
             <span class="reveal-word">
-              <EyeIcon @click="word2Revealed = true"></EyeIcon>
+              <EyeIcon @click="word2Revealed = !word2Revealed"></EyeIcon>
             </span>
           </div>
           <div class="solution">
@@ -1133,7 +1134,7 @@
             <span class="solution-word" :class="{'revealed': word3Revealed }">{{words[2].toUpperCase()}}
             </span>
             <span class="reveal-word">
-              <EyeIcon @click="word3Revealed = true"></EyeIcon>
+              <EyeIcon @click="word3Revealed = !word3Revealed"></EyeIcon>
             </span>
           </div>
           <div class="solution">
@@ -1141,7 +1142,7 @@
             <span class="solution-word" :class="{'revealed': word4Revealed }">{{words[3].toUpperCase()}}
             </span>
             <span class="reveal-word">
-              <EyeIcon @click="word4Revealed = true"></EyeIcon>
+              <EyeIcon @click="word4Revealed = !word4Revealed"></EyeIcon>
             </span>
           </div>
           <div class="solution">
@@ -1149,7 +1150,7 @@
             <span class="solution-word" :class="{'revealed': word5Revealed }">{{words[4][0].toUpperCase()}}
             </span>
             <span class="reveal-word">
-              <EyeIcon @click="word5Revealed = true"></EyeIcon>
+              <EyeIcon @click="word5Revealed = !word5Revealed"></EyeIcon>
             </span>
           </div>
         </div>
