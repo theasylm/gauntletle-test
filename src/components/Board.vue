@@ -18,7 +18,7 @@
 </template>
 
 <style>
-  .board {
+  .boards {
     height: calc(100vh - 24.5rem);
     overflow: scroll;
     -ms-overflow-style: none;  /* IE and Edge */

@@ -153,9 +153,10 @@
   const encodeGame = function() {
     let buffer = new ArrayBuffer(10)
     let bufferView16 = new Uint16Array(buffer)
-    for ( let i=0; i < words.value.length; i++ ){
+    for ( let i=0; i < words.value.length - 1; i++ ){
       bufferView16[i] = wordList.indexOf(words.value[i])
     }
+    bufferView16[4] = wordList.indexOf(words.value[4][0])
     let bufferView8 = new Uint8Array(buffer)
     let binary = '';
     let len = bufferView8.byteLength;
@@ -199,45 +200,64 @@
         }
       }
       let fairAnswers = GetFairAnswer(wordList,words.value)
-      if ( fairAnswers.length > 0 ) {
+      if ( fairAnswers[0].length > 0 ) {
         if ( adversarial.value > 1 ) {
+          fairAnswerWords.value = fairAnswers[0]
           words.value.push(fairAnswers[0])
           victoryWords.value = fairAnswers[1]
         } else if ( adversarial.value == 1 ) {
+          fairAnswerWords.value = fairAnswers
           words.value.push(fairAnswers)
         } else {
+          fairAnswerWords.value = fairAnswers
           words.value.push([fairAnswers[Math.floor(Math.random() * fairAnswers.length)]])
         }
       }
     }
   }
 
+  let adverseStored = window.localStorage.getItem('adversarial') || 0
+  let adversarial = ref(adverseStored)
+
+  const updateRevealNonAnswer = function () {
+    window.localStorage.setItem('revealNonAnswer',revealNonAnswer.value)
+  }
+  const updateAdversarial = function () {
+    window.localStorage.setItem('adversarial',adversarial.value)
+    playAgain()
+  }
+
   const loadWords = function(p) {
     let a = decodeGame(p)
-    for (let i=0; i < 5; i++){
+    for (let i=0; i < 4; i++){
       words.value[i] = wordList[a[i]]
     }
+    words.value[4] = [wordList[a[4]]]
+    adversarial.value = 0
   }
 
   const loadCustom = function(c) {
     let a = decodeCustom(c)
-    for (let i=0; i < 5; i++){
+    for (let i=0; i < 4; i++){
       words.value[i] = a[i]
     }
+    words.value[4] = [a[4]]
+    adversarial.value = 0
   }
 
   let words = ref(Array())
   let victoryWords = ref(Array())
-  let adverseStored = window.localStorage.getItem('adversarial') || 0
-  let adversarial = ref(adverseStored)
+  let fairAnswerWords = ref(Array())
   let p = (new URL(document.location)).searchParams.get('p')
   let c = (new URL(document.location)).searchParams.get('c')
-  let fromC = false
+  let fromC = ref(false)
+  let fromP = ref(false)
   if ( p ) {
     loadWords(p)
+    fromP.value = true
   } else if ( c ){
     loadCustom(c)
-    fromC = true
+    fromC.value = true
   } else {
     genNewWords()
   }
@@ -453,6 +473,8 @@
   let word3Revealed = ref(false)
   let word4Revealed = ref(false)
   let word5Revealed = ref(false)
+  let victoryRevealed = ref(false)
+  let fairRevealed = ref(false)
   let newWord1 = ref('')
   let newWord2 = ref('')
   let newWord3 = ref('')
@@ -632,7 +654,7 @@
       }
     }
 
-    if ( adversarial.value > 0 && currentGuess.value == 5 ) {
+    if ( adversarial.value > 0 && currentGuess.value == 5 && currentGame.value == 4) {
       if ( words.value[4].length == 1 ) {
         word = words.value[4][0]
       } else {
@@ -645,7 +667,7 @@
     }
 
     correct.value = ( playerAnswer === word )
-    if ( adversarial.value == 3 & guessNotInAnswerList.value ) {
+    if ( adversarial.value == 3 & guessNotInAnswerList.value && currentGuess.value == 5 && currentGame.value == 4) {
       return
     }
 
@@ -853,12 +875,15 @@
     genNewWords()
     loadGuesses()
     showWinModal.value = false
-    fromC = false
+    fromC.value = false
+    fromP.value = false
     word1Revealed.value = false
     word2Revealed.value = false
     word3Revealed.value = false
     word4Revealed.value = false
     word5Revealed.value = false
+    victoryRevealed.value = false
+    fairRevealed.value = false
   }
 
   const giveUp = function() {
@@ -882,20 +907,27 @@
   }
 
   const copyResults = function() {
-    let gameResults = ( fromC ? "Custom" : "Infinite" ) + " Gauntletle Results\n"
+    let gameResults = ( fromC.value ? "Custom" : "Infinite" ) + " Gauntletle Results\n"
     let count = getPlayerGuessCount(0)
-    gameResults += "1: " + ( count > 0 ? count : 'X' ) + "/6\n"
+    gameResults += "1: " + ( count > 0 ? count : 'X' ) + "/6"
+    gameResults += "\n"
     for ( let i=1; i < 4; i++ ) {
       count = getPlayerGuessCount(i) - 1
       gameResults += (i + 1) + ": " + ( count > 0 ? count : 'X' ) + "/5\n"
     }
     count = getPlayerGuessCount(4) - 4
-    gameResults += "5: " + ( count > 0 ? count : 'X' ) + "/2\n"
-    gameResults += "How well can you do?\n"
-    if ( fromC ) {
-      gameResults += window.location
-    } else {
-      gameResults += "https://theasylm.github.io/gauntletle/?p=" + encodeGame()
+    gameResults += "5: " + ( count > 0 ? count : 'X' ) + "/2"
+    for ( let i=1; i <= adversarial.value; i++ ) {
+      gameResults += '*'
+    }
+    gameResults += "\n"
+    if ( adversarial.value == 0 ) {
+      gameResults += "How well can you do?\n"
+      if ( fromC.value ) {
+        gameResults += window.location
+      } else {
+        gameResults += "https://theasylm.github.io/gauntletle/?p=" + encodeGame()
+      }
     }
     navigator.clipboard.writeText(gameResults)
     let span = document.getElementById('copiedResultsMessage')
@@ -983,13 +1015,6 @@
       span.className = classes
     }, 2000)
   }
-
-  const updateRevealNonAnswer = function () {
-    window.localStorage.setItem('revealNonAnswer',revealNonAnswer.value)
-  }
-  const updateAdversarial = function () {
-    window.localStorage.setItem('adversarial',adversarial.value)
-  }
 </script>
 
 <template>
@@ -1012,8 +1037,9 @@
     </div>
     <div class="info">
       <h5 class="warning-message" :class="{'shown': guessNotInDictionary || guessNotInAnswerList }">Word not in {{guessNotInDictionary ? 'dictionary' : 'answer list'}}.</h5>
-      <h5 v-if="adversarial == 3 && currentGame == 4">{{victoryWords.length}} path{{ victoryWords.length > 1 ? 's' : '' }} to victory</h5>
-
+      <!-- words: {{words}}<br/>
+      victory: {{victoryWords}}<br/>
+      fair: {{fairAnswerWords}} -->
    </div>
     <div class="row">
       <div class="col-2"></div>
@@ -1051,6 +1077,19 @@
         <div class="tab-pane fade" :class="{'active': currentGame == 4, 'show': currentGame == 4}" id="board-five-pane" role="tabpanel" aria-labelledby="board-five" tabindex="-1">
           <Board :guesses="allGuesses[4]" :guessNotInDictionary="guessNotInDictionary" :guessNotInAnswerList="guessNotInAnswerList" :currentGuess="currentGuess" :currentPosition="currentPosition" :wordLength="wordLength"></Board>
         </div>
+        <h5 class="paths" v-if="adversarial == 3 && currentGame == 4">{{victoryWords.length}} path{{ victoryWords.length > 1 ? 's' : '' }} to victory</h5>
+        <h5 class="victory" v-if="adversarial == 3 && currentGame == 4" :class="{'shown': finished }">
+          Victory words: <span class="victory-words" :class="{'revealed': victoryRevealed}">{{victoryWords.join(', ')}}</span>
+          <span class="reveal-word">
+            <EyeIcon @click="victoryRevealed = true"></EyeIcon>
+          </span>
+        </h5>
+        <h5 v-if="finished && !fromC && !fromP">
+          Possible answers: <span class="fair-words" :class="{'revealed': fairRevealed}">{{fairAnswerWords.join(', ')}}</span>
+          <span class="reveal-word">
+            <EyeIcon @click="fairRevealed = true"></EyeIcon>
+          </span>
+        </h5>
       </div>
     </div>
     <Keyboard :rows="keyboardRows"></Keyboard>
@@ -1172,7 +1211,22 @@
             Grey indicates the P is not in the word.</p>
             <p>After the first word, you will be seeded with the previous word as your starting guess.</p>
             <p>On the final word, you will be seeded with the previous four words as starting guesses.</p>
+            <p>Optionally, this final board can be played in adversarial mode. See below.</p>
             <p>If you wish to give up, you can hit the red X. You will be asked to confirm your decision.</p>
+            <hr/>
+          </div>
+        </div>
+        <h2>Adversarial Mode</h2>
+        <div class="row">
+          <div class="col-sm-12">
+            <p>The game can optionally be played in adversarial mode, with three levels of difficulty, which affects the final board and which words are available for guessing.</p>
+            <p>Adversarial mode means that the answer for the final board will be changed based upon your guess to the worst remaining possible option.</p>
+            <p>The way to win an adversarial game is to make a guess that makes all remaining answers equally likely. The computer will then be forced to eliminate all but one possible choice and give you the clues based on that choice.</p>
+            <p>It is important to note for these rules that there is difference in word lists; specifically, there is an answer list, and there is an accepted list. Only words that can be found on the answer list can ever be answers. However, in most modes, you are allowed to guess anything on the accepted list. There is a setting available to inform of whether a word is on the answer list or not.</p>
+            <p>The first level of difficulty, "On", is simply having adversarial mode on. The number of words that will eliminate the possibilities and ensure a win is at least 10 words on the answer list, though there are usually quite a number in this mode. You are free to guess words on the accepted list, which can win the game.</p>
+            <p>The second level of difficulty, "Hard", limits the number of possible words that ensures victory to less than 10 on the answer list. Importantly, however, you are <i>not</i> required to guess a word on the answer list to win. There can be guesses on the accepted list that can win, and you may guess them in this mode.</p>
+            <p>Finally, "Ultra" difficulty not only limits the number of possible words to less than 10 on the answer list, in this mode you <i>are</i> required to guess a word on the answer list to win. Words that are just on the accepted list are not permitted as guesses in this mode on the final board, though you may guess accepted words on other boards.</p>
+            <p>Note: while you can share the results of an adversarial game, you cannot share a link to one.</p>
             <hr/>
           </div>
         </div>
@@ -1182,6 +1236,7 @@
             <p>Create a custom Gauntletle by clicking the New Custom button. Then you will be asked to enter the five words to be guessed in order.</p>
             <p>
               Once you've filled in all the words, hit either the 'Go to Puzzle' button (good for testing your puzzle); the 'Share Link' button, which will copy the puzzle link with a handy message ready for pasting in chat, email, or wherever; or the 'Copy Link' button, which will copy just the link to the puzzle.</p>
+              <p>You cannot create a custom adversarial puzzle.</p>
             <hr class="with-bottom"/>
           </div>
         </div>
@@ -1371,8 +1426,11 @@
     visibility: hidden;
     margin: 0;
   }
-  .warning-message.shown {
+  .warning-message.shown, .victory.shown {
     visibility: visible;
+  }
+  .victory {
+    visibility: hidden;
   }
   #copiedMessage, #copiedResultsMessage, #copiedJustMessage {
     visibility: hidden;
@@ -1451,7 +1509,11 @@
     display: inline-block;
     background-color: #efefef;
   }
-  .solution-word.revealed {
+  .victory-words, .fair-words {
+    display: inline-block;
+    background-color: #efefef;
+  }
+  .solution-word.revealed, .victory-words.revealed, .fair-words.revealed {
     background-color: #011637;
   }
   .reveal-word {
@@ -1532,6 +1594,9 @@
   }
   .no-bottom {
     margin-bottom: 0;
+  }
+  .paths {
+    margin-top: 1rem;
   }
 </style>
 <style scoped>
