@@ -491,55 +491,19 @@
   })
 
   let boardOneDisabled = computed(() => {
-    return false
+    return cannotGiveUp.value
   })
   let boardTwoDisabled = computed(() => {
-    if ( finished.value ) {
-      if ( currentGame.value > 0 ) {
-        return false
-      }
-    } else {
-      if ( currentGame.value > 0 ) {
-        return false
-      }
-    }
-    return true
+    return currentGame.value < 1 || cannotGiveUp.value
   })
   let boardThreeDisabled = computed(() => {
-    if ( finished.value ) {
-      if ( currentGame.value > 1 ) {
-        return false
-      }
-    } else {
-      if ( currentGame.value > 1 ) {
-        return false
-      }
-    }
-    return true
+    return currentGame.value < 2 || cannotGiveUp.value
   })
   let boardFourDisabled = computed(() => {
-    if ( finished.value ) {
-      if ( currentGame.value > 2 ) {
-        return false
-      }
-    } else {
-      if ( currentGame.value > 2 ) {
-        return false
-      }
-    }
-    return true
+    return currentGame.value < 3 || cannotGiveUp.value
   })
   let boardFiveDisabled = computed(() => {
-    if ( finished.value ) {
-      if ( currentGame.value > 3 ) {
-        return false
-      }
-    } else {
-      if ( currentGame.value > 3 ) {
-        return false
-      }
-    }
-    return true
+    return currentGame.value < 4 || cannotGiveUp.value
   })
 
   let newWord1Invalid = computed(() => {
@@ -704,7 +668,9 @@
       if ( finished.value ) {
         showWinModal.value = true
       }
-      cannotGiveUp.value = false
+      if ( !correct.value) {
+        cannotGiveUp.value = false
+      }
     }, 300 * guess.length * skip)
 
     if ( correct.value ) {
@@ -716,9 +682,9 @@
         currentPosition.value = 0
         currentGuess.value = -1
         setTimeout(() => {
+          currentGame.value++
           currentPosition.value = 0
           currentGuess.value = 0
-          currentGame.value++
           resetKeyboard()
           completeRow(true)
           if ( currentGame.value == 4 ) {
@@ -726,7 +692,6 @@
             completeRow(true)
             completeRow(true)
           }
-          cannotGiveUp.value = false
         },2500)
       }
       return
