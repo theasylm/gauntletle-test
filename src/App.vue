@@ -476,6 +476,7 @@
   let victoryRevealed = ref(false)
   let fairRevealed = ref(false)
   let cannotGiveUp = ref(false)
+  let shownBoard = ref(Object())
   let newWord1 = ref('')
   let newWord2 = ref('')
   let newWord3 = ref('')
@@ -683,6 +684,7 @@
         currentGuess.value = -1
         setTimeout(() => {
           currentGame.value++
+          shownBoard.value = document.getElementById('board' + (currentGame.value + 1))
           currentPosition.value = 0
           currentGuess.value = 0
           resetKeyboard()
@@ -753,7 +755,7 @@
   })
 
   const onKey = function(key) {
-    if (showWinModal.value || showHelpModal.value || showConfirmModal.value || showFormModal.value || finished.value ) {
+    if (showWinModal.value || showHelpModal.value || showConfirmModal.value || showFormModal.value || finished.value || ( currentGame.value + 1 != shownBoard.value['id'].replace('board',''))) {
       return
     }
     if (/^[a-zA-Z_\-]$/.test(key)) {
@@ -993,6 +995,12 @@
     }
     showConfirmModal.value = (true && !finished.value)
   }
+  window.addEventListener('shown.bs.tab', function (event) {
+    shownBoard.value = event.target
+  })
+  $(document).ready( function() {
+    shownBoard.value = document.getElementById('board1')
+  })
 </script>
 
 <template>
@@ -1024,19 +1032,19 @@
       <div class="col-2"></div>
       <ul class="nav nav-pills nav-justified col-8" id="boardsNav" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link" :class="{'active': currentGame == 0}" id="board1" data-bs-toggle="pill" data-bs-target="#board-one-pane" type="button" role="tab" aria-controls="board-one-pane" aria-selected="true" :disabled="!finished">1</button>
+          <button class="nav-link" :class="{'active': currentGame == 0}" id="board1" data-bs-toggle="pill" data-bs-target="#board-one-pane" type="button" role="tab" aria-controls="board-one-pane" aria-selected="true" >1</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" :class="{'active': currentGame == 1}" id="board2" data-bs-toggle="pill" data-bs-target="#board-two-pane" type="button" role="tab" aria-controls="board-two-pane" aria-selected="false" :disabled="!finished">2</button>
+          <button class="nav-link" :class="{'active': currentGame == 1}" id="board2" data-bs-toggle="pill" data-bs-target="#board-two-pane" type="button" role="tab" aria-controls="board-two-pane" aria-selected="false" :disabled="boardTwoDisabled">2</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" :class="{'active': currentGame == 2}" id="board3" data-bs-toggle="pill" data-bs-target="#board-three-pane" type="button" role="tab" aria-controls="board-three-pane" aria-selected="false" :disabled="!finished">3</button>
+          <button class="nav-link" :class="{'active': currentGame == 2}" id="board3" data-bs-toggle="pill" data-bs-target="#board-three-pane" type="button" role="tab" aria-controls="board-three-pane" aria-selected="false" :disabled="boardThreeDisabled">3</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" :class="{'active': currentGame == 3}" id="board4" data-bs-toggle="pill" data-bs-target="#board-four-pane" type="button" role="tab" aria-controls="board-four-pane" aria-selected="false" :disabled="!finished">4</button>
+          <button class="nav-link" :class="{'active': currentGame == 3}" id="board4" data-bs-toggle="pill" data-bs-target="#board-four-pane" type="button" role="tab" aria-controls="board-four-pane" aria-selected="false" :disabled="boardFourDisabled">4</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" :class="{'active': currentGame == 4}" id="board5" data-bs-toggle="pill" data-bs-target="#board-five-pane" type="button" role="tab" aria-controls="board-five-pane" aria-selected="false" :disabled="!finished">5</button>
+          <button class="nav-link" :class="{'active': currentGame == 4}" id="board5" data-bs-toggle="pill" data-bs-target="#board-five-pane" type="button" role="tab" aria-controls="board-five-pane" aria-selected="false" :disabled="boardFiveDisabled">5</button>
         </li>
       </ul>
       <div class="col-2"></div>
