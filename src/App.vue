@@ -475,6 +475,7 @@
   let word5Revealed = ref(false)
   let victoryRevealed = ref(false)
   let fairRevealed = ref(false)
+  let cannotGiveUp = ref(false)
   let newWord1 = ref('')
   let newWord2 = ref('')
   let newWord3 = ref('')
@@ -622,6 +623,7 @@
   }
 
   const completeRow = function(skipAnimation,skipKeyboard) {
+    cannotGiveUp.value = true
     let word = ''
     if ( currentGame.value != 4 ) {
       word = words.value[currentGame.value]
@@ -635,6 +637,7 @@
     let guess = allGuesses.value[currentGame.value][currentGuess.value]
     for ( let i = 0; i < guess.length; i++){
       if ( guess[i]['letter'] === '' ) {
+        cannotGiveUp.value = false
         return
       }
     }
@@ -650,7 +653,6 @@
       } else {
         words.value[4] = adverseWords['words'][0]
         word = adverseWords['words'][0][Math.floor(Math.random() * adverseWords['words'][0].length)]
-        console.log(word)
       }
     }
 
@@ -668,11 +670,13 @@
 
     correct.value = ( playerAnswer === word )
     if ( adversarial.value == 3 && guessNotInAnswerList.value && currentGuess.value > 3 && currentGame.value == 4) {
+      cannotGiveUp.value = false
       return
     }
 
     if ( !correct.value && !acceptedWordList.includes(playerAnswer.toUpperCase()) && !skipAnimation ){
       showWordMissingMessage()
+      cannotGiveUp.value = false
       return
     }
     let changedLetters = []
@@ -691,7 +695,6 @@
       setTimeout( () => {
         guess[i]['colored'] = true
       }, (450 + 150 * (i)) * skip)
-
     }
 
     setTimeout( () => {
@@ -701,6 +704,7 @@
       if ( finished.value ) {
         showWinModal.value = true
       }
+      cannotGiveUp.value = false
     }, 300 * guess.length * skip)
 
     if ( correct.value ) {
@@ -722,6 +726,7 @@
             completeRow(true)
             completeRow(true)
           }
+          cannotGiveUp.value = false
         },2500)
       }
       return
@@ -884,6 +889,7 @@
     word5Revealed.value = false
     victoryRevealed.value = false
     fairRevealed.value = false
+    cannotGiveUp.value = false
   }
 
   const giveUp = function() {
@@ -926,7 +932,7 @@
       if ( fromC.value ) {
         gameResults += window.location
       } else {
-        gameResults += "https://theasylm.github.io/gauntletle-test/?p=" + encodeGame()
+        gameResults += "https://theasylm.github.io/gauntletle/?p=" + encodeGame()
       }
     }
     navigator.clipboard.writeText(gameResults)
@@ -984,7 +990,7 @@
     if ( formInvalid.value ){
       return
     }
-    let url = "https://theasylm.github.io/gauntletle-test/?c=" + encodeCustom()
+    let url = "https://theasylm.github.io/gauntletle/?c=" + encodeCustom()
     window.open(url, '_blank');
   }
 
@@ -992,7 +998,7 @@
     if ( formInvalid.value ){
       return
     }
-    let text = "Try my custom Gauntletle!\nhttps://theasylm.github.io/gauntletle-test/?c=" + encodeCustom()
+    let text = "Try my custom Gauntletle!\nhttps://theasylm.github.io/gauntletle/?c=" + encodeCustom()
     navigator.clipboard.writeText(text)
     let span = document.getElementById('copiedMessage')
     let classes = span.className
@@ -1006,7 +1012,7 @@
     if ( formInvalid.value ){
       return
     }
-    let url = "https://theasylm.github.io/gauntletle-test/?c=" + encodeCustom()
+    let url = "https://theasylm.github.io/gauntletle/?c=" + encodeCustom()
     navigator.clipboard.writeText(url)
     let span = document.getElementById('copiedJustMessage')
     let classes = span.className
@@ -1014,6 +1020,13 @@
     setTimeout(() => {
       span.className = classes
     }, 2000)
+  }
+
+  const updateShowConfirmModal = function() {
+    if ( cannotGiveUp.value ) {
+      return
+    }
+    showConfirmModal.value = (true && !finished.value)
   }
 </script>
 
@@ -1029,7 +1042,7 @@
         <span class="title">Gauntletle</span>
       </div>
       <div class="col-md-3 help">
-        <XIcon class="give-up-icon" @click="showConfirmModal = (true && !finished)"></XIcon>
+        <XIcon class="give-up-icon" @click="updateShowConfirmModal"></XIcon>
         <ChartBarIcon @click="openWinModal" :class="{ inactive: !finished }" ></ChartBarIcon>
         <QuestionMarkCircleIcon @click="showHelpModal = true"></QuestionMarkCircleIcon>
         <CogIcon @click="showSettingsModal = true"></CogIcon>
@@ -1037,10 +1050,10 @@
     </div>
     <div class="info">
       <h5 class="warning-message" :class="{'shown': guessNotInDictionary || guessNotInAnswerList }">Word not in {{guessNotInDictionary ? 'dictionary' : 'answer list'}}.</h5>
-      <!-- words: {{words}}<br/>
+      words: {{words}}<br/>
       victory: {{victoryWords}}<br/>
       fair: {{fairAnswerWords}}<br/>
-      {{currentGame}} -->
+      {{currentGame}}
    </div>
     <div class="row">
       <div class="col-2"></div>
